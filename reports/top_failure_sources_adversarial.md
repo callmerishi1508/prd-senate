@@ -1,0 +1,5 @@
+# Top Failure Sources
+- **SCHEMA_REPAIR**: 162
+- **VALIDATION_FAILURE**: 36
+- **SOURCE_BACKFILL**: 23
+- **RESEARCH_RETRY**: 3

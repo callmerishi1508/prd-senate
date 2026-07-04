@@ -1,0 +1,29 @@
+{
+  "title": "AI Reliability Dashboard",
+  "tags": ["ai", "reliability"],
+  "timezone": "browser",
+  "panels": [
+    {
+      "title": "AI Corrections Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(prd_senate_ai_corrections_total[5m]) / rate(prd_senate_api_requests_total{endpoint=\"ollama\"}[5m])",
+          "legendFormat": "Correction Rate"
+        }
+      ]
+    },
+    {
+      "title": "Corrections by Type",
+      "type": "barchart",
+      "targets": [
+        {
+          "expr": "sum(rate(prd_senate_ai_corrections_total[5m])) by (correction_type)",
+          "legendFormat": "{{correction_type}}"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 16,
+  "version": 0
+}

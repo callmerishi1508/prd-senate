@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'prd-senate'
+    static_configs:
+      - targets: ['prd-senate-app:3000']
