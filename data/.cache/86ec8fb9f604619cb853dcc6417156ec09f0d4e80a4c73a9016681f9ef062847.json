@@ -1,0 +1,49 @@
+{
+  "productCategory": "Transportation",
+  "researchConfidence": 85,
+  "categoryScores": [],
+  "researchSources": [
+    "Tavily Search API (Simulated)",
+    "Market Intelligence DB",
+    "LLM Synthesis"
+  ],
+  "competitors": [
+    {
+      "name": "Uber",
+      "strengths": [
+        "Large user base",
+        "Wide geographical coverage"
+      ],
+      "weaknesses": [
+        "High commission fees for drivers"
+      ]
+    },
+    {
+      "name": "Lyft",
+      "strengths": [
+        "User-friendly interface",
+        "Competitive pricing"
+      ],
+      "weaknesses": [
+        "Limited availability in some areas"
+      ]
+    }
+  ],
+  "commonFeatures": [
+    "GPS tracking",
+    "Real-time fare estimates",
+    "In-app payment processing"
+  ],
+  "marketStandards": [
+    "Background checks for drivers",
+    "Liability insurance for passengers"
+  ],
+  "opportunities": [
+    "Integration with public transportation systems",
+    "Expansion into emerging markets"
+  ],
+  "risks": [
+    "Regulatory challenges in certain regions",
+    "Cybersecurity threats to user data"
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "productCategory": "Manufacturing",
+  "researchConfidence": 85,
+  "categoryScores": [],
+  "researchSources": [
+    "Tavily Search API (Simulated)",
+    "Market Intelligence DB",
+    "LLM Synthesis"
+  ],
+  "competitors": [
+    {
+      "name": "Manufacturing ERP A",
+      "strengths": [
+        "Advanced Reporting Tools",
+        "Customer Support Team",
+        "Customizable Templates"
+      ],
+      "weaknesses": [
+        "Limited Customization Options",
+        "Higher Maintenance Costs",
+        "Less User-Friendly Interface"
+      ]
+    },
+    {
+      "name": "Manufacturing ERP B",
+      "strengths": [
+        "Scalable Architecture",
+        "Strong Customer Support",
+        "Comprehensive Reporting Features"
+      ],
+      "weaknesses": [
+        "Lower Reliability Ratings",
+        "Expensive Maintenance Costs",
+        "Few Customizable Options"
+      ]
+    },
+    {
+      "name": "Manufacturing ERP C",
+      "strengths": [
+        "User-Friendly Interface",
+        "Highly Scalable System",
+        "Low Maintenance Costs"
+      ],
+      "weaknesses": [
+        "Less Advanced Reporting Tools",
+        "Limited Customer Support",
+        "Lower Reliability Ratings"
+      ]
+    }
+  ],
+  "commonFeatures": [
+    "Scalability",
+    "Reliability",
+    "Reporting Tools",
+    "Customization Options",
+    "Customer Support",
+    "User-Friendly Interface",
+    "Comprehensive Reporting Features",
+    "Scalable Architecture",
+    "Highly Scalable System"
+  ],
+  "marketStandards": [
+    "Industry Standards",
+    "Best Practices in Manufacturing ERP",
+    "Advanced Reporting Technologies"
+  ],
+  "opportunities": [
+    "Targeting Smaller, Medium-Sized Businesses",
+    "Expansion into New Markets (e.g., Remote Work Solutions)",
+    "Incorporating AI and Machine Learning for Advanced Analytics"
+  ],
+  "risks": [
+    "Scalability Challenges in Large Enterprises",
+    "High Maintenance Costs in Customizable Systems",
+    "Limited User-Interface Adaptation for Non-Technical Users"
+  ]
+}

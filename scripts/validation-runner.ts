@@ -127,20 +127,21 @@ async function runSuite() {
   } else if (suite === 'compatibility-10') {
     const models = ["qwen2.5:1.5b", "qwen2.5-coder:7b", "llama3.1:8b"];
     const explicitDomains = [
-      "Build a Ride Sharing Platform",
-      "Build a Manufacturing ERP",
-      "Build an Agriculture Marketplace",
       "Build a Hospital Management System",
       "Build a Drone Fleet Management tool",
       "Build a Student Collaboration Platform",
+      "Build a Ride Sharing Platform",
+      "Build a Manufacturing ERP",
+      "Build an Agriculture Marketplace",
       "Build an E-Commerce Marketplace",
       "Build an IoT Smart Home Platform",
       "Build a Legal Contract Assistant",
       "Build an AI Research Assistant"
     ];
+    const domainsToRun = explicitDomains.slice(0, limit);
     for (const m of models) {
-      for (let i = 0; i < explicitDomains.length; i++) {
-        projects.push({ id: `proj-comp-${m.replace(':','-')}-${i}`, stmt: explicitDomains[i], model: m });
+      for (let i = 0; i < domainsToRun.length; i++) {
+        projects.push({ id: `proj-comp-${m.replace(':','-')}-${i}`, stmt: domainsToRun[i], model: m });
       }
     }
   } else if (suite === 'robustness') {
@@ -178,7 +179,7 @@ async function runSuite() {
   // Clear baseline
   console.log("Clearing previous telemetry data...");
   const dataDir = path.join(process.cwd(), 'data');
-  for (const file of ['ai_corrections.jsonl', 'ai_generations.jsonl', 'versions.json']) {
+  for (const file of ['ai_corrections.jsonl', 'ai_generations.jsonl', 'versions.json', 'ai_tokens.jsonl', 'ai_terminal_failures.jsonl', 'ai_retries.jsonl']) {
     const filePath = path.join(dataDir, file);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
   }

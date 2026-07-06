@@ -1,0 +1,67 @@
+{
+  "productCategory": "ERP (Enterprise Resource Planning) Software",
+  "researchConfidence": 85,
+  "categoryScores": [],
+  "researchSources": [
+    "Tavily Search API (Simulated)",
+    "Market Intelligence DB",
+    "LLM Synthesis"
+  ],
+  "competitors": [
+    {
+      "name": "SAP ERP",
+      "strengths": [
+        "Comprehensive features",
+        "Strong brand presence"
+      ],
+      "weaknesses": [
+        "High cost",
+        "Complex setup"
+      ]
+    },
+    {
+      "name": "Oracle E-Business Suite",
+      "strengths": [
+        "Robust functionality",
+        "Enterprise scalability"
+      ],
+      "weaknesses": [
+        "Stiff learning curve",
+        "Cost-intensive"
+      ]
+    },
+    {
+      "name": "Infor ERP",
+      "strengths": [
+        "User-friendly interface",
+        "Customizable solutions"
+      ],
+      "weaknesses": [
+        "Limited integration options",
+        "Relatively expensive"
+      ]
+    }
+  ],
+  "commonFeatures": [
+    "Inventory management",
+    "Production planning",
+    "Financial accounting",
+    "Project management"
+  ],
+  "marketStandards": [
+    "Scalability and reliability",
+    "User-friendly interface",
+    "Integration capabilities",
+    "Customization options"
+  ],
+  "opportunities": [
+    "Growing demand for ERP solutions in manufacturing sectors",
+    "Emerging technologies like AI and IoT integration",
+    "Increasing focus on data analytics and reporting"
+  ],
+  "risks": [
+    "High initial setup costs for complex systems",
+    "Risk of vendor lock-in with proprietary software",
+    "Challenges in integrating with existing legacy systems"
+  ]
+}

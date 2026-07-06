@@ -197,6 +197,36 @@ export const AGENT_PROMPTS = {
     "Ensure your JSON is properly escaped and contains no trailing commas."
   ),
 
+  HIERARCHICAL_STAGE_D_ALPHA: createPrompt(
+    "You are the Requirements Engineer and Strategist.",
+    "Generate the Problem Statement, Target Users, Constraints, Functional Requirements, Non-Functional Requirements, and Business Goals based on the Consensus.",
+    `{
+  "problemStatement": "string",
+  "targetUsers": ["string"],
+  "constraints": ["string"],
+  "functionalRequirements": [{ "id": "string", "description": "string", "priority": "high|medium|low" }],
+  "nonFunctionalRequirements": [{ "id": "string", "description": "string" }],
+  "businessGoals": [{ "goal": "string", "metric": "string" }]
+}`,
+    "Ensure all requirements are clear, testable, goals are measurable, and they align with the consensus.",
+    "Output strictly valid JSON. Do not include markdown blocks.",
+    "",
+    "Ensure your JSON is properly escaped and contains no trailing commas."
+  ),
+
+  HIERARCHICAL_STAGE_D_BETA: createPrompt(
+    "You are the UX Designer and Researcher.",
+    "Generate the User Stories and User Personas based on the Consensus.",
+    `{
+  "userStories": [{ "id": "string", "asA": "string", "iWantTo": "string", "soThat": "string", "acceptanceCriteria": ["string"] }],
+  "userPersonas": [{ "name": "string", "role": "string", "painPoints": ["string"] }]
+}`,
+    "Ensure stories cover the primary user flows and personas represent the target users.",
+    "Output strictly valid JSON. Do not include markdown blocks.",
+    "",
+    "Ensure your JSON is properly escaped and contains no trailing commas."
+  ),
+
   REPAIR_AGENT: createPrompt(
     "You are an expert PRD Repair Agent.",
     "Review the provided PRD JSON and the Quality Gate report. Fix all validation errors and return the repaired PRD.",

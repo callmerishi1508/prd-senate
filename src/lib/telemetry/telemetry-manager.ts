@@ -1,11 +1,13 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { AICorrectionEvent, AIGenerationEvent } from './telemetry-schema';
+import { AICorrectionEvent, AIGenerationEvent, AITokenEvent, AITerminalFailureEvent, AIRetryEvent } from './telemetry-schema';
 import { aiCorrectionsTotal, generationDuration, apiRequestsTotal } from './metrics';
 
 const CORRECTIONS_FILE = path.join(process.cwd(), 'data', 'ai_corrections.jsonl');
 const GENERATIONS_FILE = path.join(process.cwd(), 'data', 'ai_generations.jsonl');
-
+const TOKENS_FILE = path.join(process.cwd(), 'data', 'ai_tokens.jsonl');
+const TERMINAL_FAILURES_FILE = path.join(process.cwd(), 'data', 'ai_terminal_failures.jsonl');
+const RETRIES_FILE = path.join(process.cwd(), 'data', 'ai_retries.jsonl');
 async function appendJsonl(filePath: string, data: any) {
   try {
     const line = JSON.stringify(data) + '\n';
@@ -39,6 +41,18 @@ export async function logGenerationEvent(event: AIGenerationEvent) {
   await appendJsonl(GENERATIONS_FILE, event);
 }
 
+export async function logTokenEvent(event: AITokenEvent) {
+  await appendJsonl(TOKENS_FILE, event);
+}
+
+export async function logTerminalFailureEvent(event: AITerminalFailureEvent) {
+  await appendJsonl(TERMINAL_FAILURES_FILE, event);
+}
+
+export async function logRetryEvent(event: AIRetryEvent) {
+  await appendJsonl(RETRIES_FILE, event);
+}
+
 // Utility to read JSONL files
 async function readJsonl<T>(filePath: string): Promise<T[]> {
   try {
@@ -54,6 +68,7 @@ async function readJsonl<T>(filePath: string): Promise<T[]> {
 export async function getTelemetryStats() {
   const corrections = await readJsonl<AICorrectionEvent>(CORRECTIONS_FILE);
   const generations = await readJsonl<AIGenerationEvent>(GENERATIONS_FILE);
+  const tokenEvents = await readJsonl<AITokenEvent>(TOKENS_FILE);
 
   const totalGenerations = generations.length;
   const totalCorrections = corrections.length;
@@ -104,5 +119,15 @@ export async function getTelemetryStats() {
     },
     criticalEscapes,
     correctionEfficiency
+  };
+}
+
+export async function getPhase15JStats() {
+  const terminalFailures = await readJsonl<AITerminalFailureEvent>(TERMINAL_FAILURES_FILE);
+  const retries = await readJsonl<AIRetryEvent>(RETRIES_FILE);
+  
+  return {
+    terminalFailures: terminalFailures.length,
+    retries: retries.length
   };
 }

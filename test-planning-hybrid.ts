@@ -39,7 +39,7 @@ async function test() {
     epics.push({ id: "EPIC-3", title: "Booking", description: "Ride Booking. Requires Auth and Profiles.", priority: "HIGH", estimatedEffort: "L", relatedRequirements: ["FR-003"], relatedStories: [] });
   }
 
-  const deps = await detectDependencies(epics);
+  const deps = await detectDependencies(epics, "test-project");
   console.log("Generated Dependencies:", deps);
 
   const criticalPath = calculateCriticalPath(epics.map(e => e.id), deps);

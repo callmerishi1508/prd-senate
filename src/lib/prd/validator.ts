@@ -29,6 +29,18 @@ export function validateAndNormalizePRD(raw: any): ValidationResult {
     return { isValid: false, normalizedPRD: raw as any, violations };
   }
 
+  // Map keys from prompt generation schema to validator schema (Phase 15K reliability fix)
+  if (raw && typeof raw === 'object') {
+    if (raw.problemStatement && !raw.productOverview) {
+      raw.productOverview = raw.problemStatement;
+    }
+    if (raw.businessGoals && !raw.goals) {
+      raw.goals = Array.isArray(raw.businessGoals) ? raw.businessGoals.map((g: any) => ({
+        description: (g.goal || '') + ' (Metric: ' + (g.metric || '') + ')'
+      })) : [];
+    }
+  }
+
   // Helper to get actual type including 'null' and 'array'
   const getActualType = (val: any) => {
     if (val === null) return 'null';

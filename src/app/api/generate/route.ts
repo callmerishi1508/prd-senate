@@ -5,7 +5,7 @@ import { AGENT_PROMPTS } from '../../../lib/agents/prompts';
 import { smartExtractJSON as extractJSON } from '../../../lib/utils/smart-extractor';
 import { runHierarchicalConsensus } from '../../../lib/agents/consensus';
 import { StructuredPRD } from '../../../lib/prd/schema';
-import { logGenerationEvent } from '../../../lib/telemetry/telemetry-manager';
+import { logGenerationEvent, logTerminalFailureEvent } from '../../../lib/telemetry/telemetry-manager';
 
 export const maxDuration = 300;
 
@@ -53,21 +53,22 @@ export async function POST(req: Request) {
             const uxPrompt = `Review this draft:\n${draftRes}`;
             const techPrompt = `Review this draft:\n${draftRes}`;
 
-            const tCritiqueStart = Date.now();
-            const [uxRes, techRes] = await Promise.all([
-                generateOllamaResponse([
-                    { role: 'system', content: AGENT_PROMPTS.UX_CRITIQUE },
-                    { role: 'user', content: uxPrompt }
-                ], { model, num_predict: 400, num_ctx: 1024 }),
-                generateOllamaResponse([
-                    { role: 'system', content: AGENT_PROMPTS.TECH_CRITIQUE },
-                    { role: 'user', content: techPrompt }
-                ], { model, num_predict: 400, num_ctx: 1024 })
-            ]);
-            const tCritiqueEnd = Date.now();
+            const tUXStart = Date.now();
+            const uxRes = await generateOllamaResponse([
+                { role: 'system', content: AGENT_PROMPTS.UX_CRITIQUE },
+                { role: 'user', content: uxPrompt }
+            ], { model, num_predict: 400, num_ctx: 1024 });
+            const tUXEnd = Date.now();
             
-            logGenerationEvent({ projectId, model, stage: 'UX Critique', timestamp: new Date().toISOString(), latencyMs: tCritiqueEnd - tCritiqueStart, success: true }).catch(() => {});
-            logGenerationEvent({ projectId, model, stage: 'Tech Critique', timestamp: new Date().toISOString(), latencyMs: tCritiqueEnd - tCritiqueStart, success: true }).catch(() => {});
+            const tTechStart = Date.now();
+            const techRes = await generateOllamaResponse([
+                { role: 'system', content: AGENT_PROMPTS.TECH_CRITIQUE },
+                { role: 'user', content: techPrompt }
+            ], { model, num_predict: 400, num_ctx: 1024 });
+            const tTechEnd = Date.now();
+            
+            logGenerationEvent({ projectId, model, stage: 'UX Critique', timestamp: new Date().toISOString(), latencyMs: tUXEnd - tUXStart, success: true }).catch(() => {});
+            logGenerationEvent({ projectId, model, stage: 'Tech Critique', timestamp: new Date().toISOString(), latencyMs: tTechEnd - tTechStart, success: true }).catch(() => {});
             
             let uxParsed;
             try { uxParsed = extractJSON(uxRes); } catch(e) { uxParsed = {}; }
@@ -103,7 +104,7 @@ export async function POST(req: Request) {
             let structuredPRD: StructuredPRD;
             
             if (consensusMode === 'hierarchical') {
-                structuredPRD = await runHierarchicalConsensus(projectId, model, researchReport, draftRes, uxRes, techRes, verifyRes, sendEvent);
+                structuredPRD = await runHierarchicalConsensus(projectId, model, researchReport, draftRes, uxRes, techRes, verifyRes, sendEvent, 'simplified');
             } else {
                 sendEvent('agent-status', { agent: 'Quality Validator', status: 'validating assembly' });
                 const { validateAndNormalizePRD } = require('../../../lib/prd/validator');
@@ -131,9 +132,31 @@ export async function POST(req: Request) {
 
             sendEvent('agent-status', { agent: 'System', status: 'done' });
             sendEvent('done', { success: true, prd: structuredPRD });
-        } catch (e: any) {
-            console.error('Pipeline error:', e);
-            sendEvent('error', { message: e.message });
+        } catch (err: any) {
+            let projectIdValue = 'unknown';
+            let modelValue = 'unknown';
+            try {
+                const b = await req.clone().json();
+                projectIdValue = b.projectId || 'unknown';
+                modelValue = b.model || 'unknown';
+            } catch (innerErr) {}
+
+            logTerminalFailureEvent({
+                projectId: projectIdValue,
+                model: modelValue,
+                stage: 'Pipeline End',
+                timestamp: new Date().toISOString(),
+                failureCategory: err.message?.includes('validation gates') ? 'Repair' : 'Unknown',
+                exceptionMessage: err.message || 'Unknown Error',
+                retryCount: 3,
+                validationOutcome: 'Failed',
+                parserOutcome: 'Failed',
+                repairOutcome: 'Failed',
+                deploymentGateStatus: 'Failed'
+            }).catch(() => {});
+
+            console.error('Pipeline error:', err);
+            sendEvent('error', { message: err.message || 'Unknown Error' });
             sendEvent('done', { success: false });
         } finally {
             writer.close();

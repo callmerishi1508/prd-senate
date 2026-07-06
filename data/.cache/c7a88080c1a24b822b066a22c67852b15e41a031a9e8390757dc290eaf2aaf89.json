@@ -1,0 +1,38 @@
+{
+  "productCategory": "agriculture marketplace",
+  "researchConfidence": 85,
+  "categoryScores": [],
+  "researchSources": [
+    "Tavily Search API (Simulated)",
+    "Market Intelligence DB",
+    "LLM Synthesis"
+  ],
+  "competitors": [
+    {
+      "name": "Farmer Direct",
+      "strengths": [
+        "wide customer base"
+      ],
+      "weaknesses": [
+        "limited product variety"
+      ]
+    },
+    {
+      "name": "Grocery Connect",
+      "strengths": [
+        "local farming options"
+      ],
+      "weaknesses": [
+        "higher prices"
+      ]
+    }
+  ],
+  "commonFeatures": [
+    "buy local produce",
+    "organic and sustainable products",
+    "payment through digital wallets"
+  ],
+  "marketStandards": "comparable to established food delivery platforms",
+  "opportunities": "expand into fresh produce, introduce subscription models",
+  "risks": "supply chain issues, regulatory compliance challenges"
+}

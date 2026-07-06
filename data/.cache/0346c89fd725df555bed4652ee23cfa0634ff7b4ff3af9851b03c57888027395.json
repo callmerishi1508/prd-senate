@@ -1,0 +1,42 @@
+{
+  "productCategory": "Ride-sharing platform",
+  "researchConfidence": 85,
+  "categoryScores": [],
+  "researchSources": [
+    "Tavily Search API (Simulated)",
+    "Market Intelligence DB",
+    "LLM Synthesis"
+  ],
+  "competitors": [
+    {
+      "name": "Uber",
+      "strengths": [
+        "Highly scalable infrastructure",
+        "Wide network of drivers"
+      ],
+      "weaknesses": [
+        "Limited access in rural areas"
+      ]
+    },
+    {
+      "name": "Lyft",
+      "strengths": [
+        "Focus on customer experience",
+        "Strong brand loyalty"
+      ],
+      "weaknesses": [
+        "Lower scalability due to fewer drivers compared to Uber"
+      ]
+    }
+  ],
+  "commonFeatures": [
+    "User-friendly interface",
+    "Real-time ride tracking and communication tools"
+  ],
+  "marketStandards": "Compliance with the Ride-Hailing Guidelines, including safety protocols and driver background checks",
+  "opportunities": "Expand into new markets and create partnerships for increased reach",
+  "risks": [
+    "Regulatory compliance issues",
+    "Driver recruitment challenges in certain regions"
+  ]
+}

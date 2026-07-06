@@ -4,6 +4,8 @@ import { validateAndNormalizePRD } from '../prd/validator';
 import { runRepairAgent } from './repair-agent';
 import { StructuredPRD } from '../prd/schema';
 import { AGENT_PROMPTS } from './prompts';
+import { compressResearch, compressDraft, compressUXCritique, compressTechCritique } from './context-compressor';
+import { logTokenEvent, logRetryEvent } from '../telemetry/telemetry-manager';
 
 export async function runHierarchicalConsensus(
   projectId: string,
@@ -13,33 +15,60 @@ export async function runHierarchicalConsensus(
   uxRes: string,
   techRes: string,
   verifyRes: string,
-  sendEvent: (event: string, data: any) => void
+  sendEvent: (event: string, data: any) => void,
+  pipelineProfile: "legacy" | "simplified" = "simplified"
 ): Promise<StructuredPRD> {
   const profile = { maxRetries: 3 };
   
-  // Stage A: Research
-  sendEvent('agent-status', { agent: 'Hierarchical Coordinator', status: 'synthesizing research' });
-  const tA_start = Date.now();
-  const stageARes = await generateOllamaResponse([
-    { role: 'system', content: AGENT_PROMPTS.HIERARCHICAL_STAGE_A_RESEARCH },
-    { role: 'user', content: `Original Research:\n${JSON.stringify(researchReport, null, 2)}` }
-  ], { model, num_predict: 600, num_ctx: 2048 });
-  const tA_end = Date.now();
+  let stageARes = "";
+  let stageBRes = "";
+  
+  if (pipelineProfile === "legacy") {
+    // Stage A: Research
+    sendEvent('agent-status', { agent: 'Hierarchical Coordinator', status: 'synthesizing research' });
+    stageARes = await generateOllamaResponse([
+      { role: 'system', content: AGENT_PROMPTS.HIERARCHICAL_STAGE_A_RESEARCH },
+      { role: 'user', content: `Original Research:\n${JSON.stringify(researchReport, null, 2)}` }
+    ], { model, num_predict: 600, num_ctx: 2048 });
 
-  // Stage B: Debate
-  sendEvent('agent-status', { agent: 'Hierarchical Coordinator', status: 'synthesizing debate' });
-  const tB_start = Date.now();
-  const stageBPrompt = `Draft:\n${draftRes}\n\nUX Critique:\n${uxRes}\n\nTech Critique:\n${techRes}`;
-  const stageBRes = await generateOllamaResponse([
-    { role: 'system', content: AGENT_PROMPTS.HIERARCHICAL_STAGE_B_DEBATE },
-    { role: 'user', content: stageBPrompt }
-  ], { model, num_predict: 600, num_ctx: 2048 });
-  const tB_end = Date.now();
+    // Stage B: Debate
+    sendEvent('agent-status', { agent: 'Hierarchical Coordinator', status: 'synthesizing debate' });
+    const stageBPrompt = `Draft:\n${draftRes}\n\nUX Critique:\n${uxRes}\n\nTech Critique:\n${techRes}`;
+    stageBRes = await generateOllamaResponse([
+      { role: 'system', content: AGENT_PROMPTS.HIERARCHICAL_STAGE_B_DEBATE },
+      { role: 'user', content: stageBPrompt }
+    ], { model, num_predict: 600, num_ctx: 2048 });
+  }
 
   // Stage C: Consensus
   sendEvent('agent-status', { agent: 'Hierarchical Coordinator', status: 'building consensus summary' });
   const tC_start = Date.now();
-  const stageCPrompt = `Research Summary:\n${stageARes}\n\nDebate Summary:\n${stageBRes}`;
+  
+  let stageCPrompt = "";
+  if (pipelineProfile === "simplified") {
+      const researchData = compressResearch(researchReport);
+      const draftData = compressDraft(draftRes);
+      const uxData = compressUXCritique(uxRes);
+      const techData = compressTechCritique(techRes);
+      
+      const ts = new Date().toISOString();
+      logTokenEvent({ projectId, model, stage: 'Compress_Research', timestamp: ts, fidelity: researchData.fidelity });
+      logTokenEvent({ projectId, model, stage: 'Compress_Draft', timestamp: ts, fidelity: draftData.fidelity });
+      logTokenEvent({ projectId, model, stage: 'Compress_UX', timestamp: ts, fidelity: uxData.fidelity });
+      logTokenEvent({ projectId, model, stage: 'Compress_Tech', timestamp: ts, fidelity: techData.fidelity });
+
+      const sir = {
+        market: researchData.compressed,
+        features: draftData.compressed,
+        uxConstraints: uxData.compressed,
+        techConstraints: techData.compressed
+      };
+      
+      stageCPrompt = `Structured Intermediate Representation:\n${JSON.stringify(sir, null, 2)}`;
+  } else {
+      stageCPrompt = `Research Summary:\n${stageARes}\n\nDebate Summary:\n${stageBRes}`;
+  }
+    
   const consensusSummary = await generateOllamaResponse([
     { role: 'system', content: AGENT_PROMPTS.HIERARCHICAL_STAGE_C_CONSENSUS },
     { role: 'user', content: stageCPrompt }
@@ -62,8 +91,20 @@ export async function runHierarchicalConsensus(
          
          try {
            json = extractJSON(rawJson);
-           if (json) break;
+           if (json) {
+               logRetryEvent({
+                 projectId, model, stage: stageName, timestamp: new Date().toISOString(),
+                 retryNumber: i, reason: i > 0 ? 'Parsing Succeeded after Retries' : 'First Pass Success',
+                 validatorMessage: 'None', repairPrompt: currentPrompt, repairOutput: rawJson, success: true
+               }).catch(() => {});
+               break;
+           }
          } catch (e: any) {
+           logRetryEvent({
+             projectId, model, stage: stageName, timestamp: new Date().toISOString(),
+             retryNumber: i, reason: 'JSON Parse Failure',
+             validatorMessage: e.message, repairPrompt: currentPrompt, repairOutput: rawJson, success: false
+           }).catch(() => {});
            currentPrompt = stageDPrompt + `\n\nERROR IN PREVIOUS ATTEMPT: Your output could not be parsed as valid JSON. ${e.message}\nPlease fix the JSON and try again.`;
          }
      }
@@ -72,32 +113,64 @@ export async function runHierarchicalConsensus(
      return json;
   };
 
-  const d1 = await runD('Stage D1 (Overview & Requirements)', AGENT_PROMPTS.HIERARCHICAL_STAGE_D1);
-  const d2 = await runD('Stage D2 (Goals & Metrics)', AGENT_PROMPTS.HIERARCHICAL_STAGE_D2);
-  const d3 = await runD('Stage D3 (UX & Stories)', AGENT_PROMPTS.HIERARCHICAL_STAGE_D3);
-  const d4 = await runD('Stage D4 (Tech & Personas)', AGENT_PROMPTS.HIERARCHICAL_STAGE_D4);
-
-  // Stage E: Assembly
-  sendEvent('agent-status', { agent: 'Quality Validator', status: 'validating assembly' });
-  const assembled: any = {
-      ...d1,
-      ...d2,
-      ...d3,
-      ...d4
-  };
+  let assembled: any = {};
+  
+  if (pipelineProfile === "simplified") {
+      // Reverted D-Alpha and D-Beta merge due to validation failures on 7b. 
+      // Falling back to D1-D4 while keeping A/B bypass.
+      const d1 = await runD('Stage D1 (Overview & Requirements)', AGENT_PROMPTS.HIERARCHICAL_STAGE_D1);
+      const d2 = await runD('Stage D2 (Goals & Metrics)', AGENT_PROMPTS.HIERARCHICAL_STAGE_D2);
+      const d3 = await runD('Stage D3 (UX & Stories)', AGENT_PROMPTS.HIERARCHICAL_STAGE_D3);
+      const d4 = await runD('Stage D4 (Tech & Personas)', AGENT_PROMPTS.HIERARCHICAL_STAGE_D4);
+      assembled = { ...d1, ...d2, ...d3, ...d4 };
+  } else {
+      const d1 = await runD('Stage D1 (Overview & Requirements)', AGENT_PROMPTS.HIERARCHICAL_STAGE_D1);
+      const d2 = await runD('Stage D2 (Goals & Metrics)', AGENT_PROMPTS.HIERARCHICAL_STAGE_D2);
+      const d3 = await runD('Stage D3 (UX & Stories)', AGENT_PROMPTS.HIERARCHICAL_STAGE_D3);
+      const d4 = await runD('Stage D4 (Tech & Personas)', AGENT_PROMPTS.HIERARCHICAL_STAGE_D4);
+      assembled = { ...d1, ...d2, ...d3, ...d4 };
+  }
 
   // Schema Integrity Gate
+  sendEvent('agent-status', { agent: 'Quality Validator', status: 'validating assembly' });
   let { isValid, normalizedPRD, violations } = validateAndNormalizePRD(assembled);
   
   if (!isValid) {
       sendEvent('schema-violations', { violations });
+      const alphaKeys = ['problemStatement', 'targetUsers', 'constraints', 'functionalRequirements', 'nonFunctionalRequirements'];
+      const betaKeys = ['businessGoals', 'userStories', 'userPersonas'];
+      
       for (let r = 0; r < profile.maxRetries; r++) {
-         const naturalErrors = violations.map(v => `Field ${v.field} is invalid or missing: ${v.actualType} instead of ${v.expectedType}`);
-         const repairReport = { decision: "REJECT", criticalIssues: naturalErrors, summary: "Schema validation failed during Assembly." };
-         sendEvent('agent-status', { agent: 'Repair Agent', status: `fixing assembly schema (Attempt ${r + 1})` });
+         const failedKeys = violations.map(v => v.field);
+         const failedAlpha = failedKeys.some(k => alphaKeys.includes(k));
+         const failedBeta = failedKeys.some(k => betaKeys.includes(k));
          
-         const repairedPRD = await runRepairAgent(assembled, repairReport, researchReport, model);
-         const check = validateAndNormalizePRD(repairedPRD);
+         let repairTargets: any = {};
+         let sectionName = 'whole document';
+         if (failedAlpha && !failedBeta && pipelineProfile === "simplified") {
+            alphaKeys.forEach(k => { repairTargets[k] = assembled[k] });
+            sectionName = 'Stage D1 (Overview)';
+         } else if (failedBeta && !failedAlpha && pipelineProfile === "simplified") {
+            betaKeys.forEach(k => { repairTargets[k] = assembled[k] });
+            sectionName = 'Stage D2/D3/D4';
+         } else {
+            repairTargets = assembled;
+         }
+
+         const naturalErrors = violations.map(v => `Field ${v.field} is invalid or missing: ${v.actualType} instead of ${v.expectedType}`);
+         const repairReport = { decision: "REJECT", criticalIssues: naturalErrors, summary: `Schema validation failed in ${sectionName}.` };
+         sendEvent('agent-status', { agent: 'Repair Agent', status: `fixing ${sectionName} schema (Attempt ${r + 1})` });
+         
+         const repairedPart = await runRepairAgent(repairTargets, repairReport, researchReport, model);
+         assembled = { ...assembled, ...repairedPart };
+         
+         const check = validateAndNormalizePRD(assembled);
+         logRetryEvent({
+             projectId, model, stage: 'Schema Repair', timestamp: new Date().toISOString(),
+             retryNumber: r, reason: 'Validation Failure',
+             validatorMessage: repairReport.summary, repairPrompt: JSON.stringify(repairTargets), repairOutput: JSON.stringify(repairedPart), success: check.isValid
+         }).catch(() => {});
+
          if (check.isValid) {
              isValid = true;
              normalizedPRD = check.normalizedPRD;
